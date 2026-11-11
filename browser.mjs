@@ -1,0 +1,40 @@
+import { chromium } from 'playwright';
+import { mkdir } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+export const profileUrl = account => account === 'personal'
+  ? 'https://outlook.live.com/mail/0/'
+  : 'https://outlook.cloud.microsoft/mail/';
+export const searchBox = page => page.getByRole('combobox', { name: /Search for email/ });
+export const isOutlook = page =>
+  ['outlook.cloud.microsoft', 'outlook.office.com', 'outlook.live.com'].includes(new URL(page.url()).hostname);
+
+export async function openProfile(account, headless) {
+  if (!/^[a-z][a-z0-9_-]{0,31}$/.test(account)) throw new Error('Invalid profile alias.');
+  const root = join(homedir(), '.outlook-web-mcp', 'profiles');
+  const directory = join(root, account);
+  await mkdir(root, { recursive: true, mode: 0o700 });
+  await mkdir(directory, { recursive: true, mode: 0o700 });
+  const context = await chromium.launchPersistentContext(directory, {
+    headless, chromiumSandbox: true, timeout: 15000,
+  });
+  const page = context.pages()[0] ?? await context.newPage();
+  return { context, page };
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  const account = process.argv[2];
+  if (!account) throw new Error('Usage: npm run login -- <alias>');
+  const { context, page } = await openProfile(account, false);
+  try {
+    await page.goto(profileUrl(account), {waitUntil: 'domcontentloaded'});
+    console.log(`Sign in to Outlook in the ${account} window. It closes when the mailbox is ready.`);
+    await searchBox(page).waitFor({timeout: 300000});
+    if (!isOutlook(page)) throw new Error('Outlook mailbox not reached.');
+    console.log(`Saved profile ${account}.`);
+  } finally {
+    await context.close();
+  }
+}
