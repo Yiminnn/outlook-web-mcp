@@ -6,3 +6,5 @@ playwright-report/
 test-results/
 profiles/
 .auth/
+
+.outlook-desktop-ax
