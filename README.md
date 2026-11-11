@@ -20,6 +20,6 @@ claude mcp add --scope user outlook-web -- node /absolute/path/to/outlook-web-mc
 
 Start a new agent session. `search_mail` takes `account` (defaults to `work`), `query`, and `limit` (defaults to 5). It returns sender, subject, date, and an ID. `read_mail` takes an ID and `max_chars` (defaults to 4,000). It uses the account associated with that ID. Opening unread mail can mark it as read.
 
-The server starts Chromium Headless Shell on demand and closes each browser after one minute of inactivity. Search IDs expire when that browser closes or you search that account again. Use a given alias in one agent session at a time. Run the login command again if Microsoft expires the session.
+The server starts Chromium Headless Shell on demand and closes each browser after one minute of inactivity. Search IDs expire when that browser closes or you search that account again. Use a given alias in one agent session at a time. Run the login command again if Microsoft expires the session. Some organizations require fresh authentication when the browser restarts. In that case this setup cannot resume those sessions headlessly.
 
 The current selectors target the English Outlook Web UI. Outlook UI changes can require selector updates. Email text returned by the MCP enters your agent's context.

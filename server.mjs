@@ -25,6 +25,10 @@ async function browser(account, operation, args) {
     if (!isOutlook(state.page)) throw new Error('Unexpected Outlook origin.');
     return await operation(state.page, args);
   } catch {
+    const host = state && new URL(state.page.url()).hostname;
+    if (host === 'login.microsoftonline.com' || host === 'mcas-proxyweb.mcas.ms' || host?.endsWith('.duosecurity.com')) {
+      return { error: 'Microsoft requested sign-in or a Defender redirect in the new browser session.' };
+    }
     return { error: 'Outlook is unavailable. Check that the profile is signed in, free in other clients, and on the expected Outlook page.' };
   } finally {
     if (state) {

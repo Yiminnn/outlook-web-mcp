@@ -8,8 +8,15 @@ export const profileUrl = account => account === 'personal'
   ? 'https://outlook.live.com/mail/0/'
   : 'https://outlook.cloud.microsoft/mail/';
 export const searchBox = page => page.getByRole('combobox', { name: /Search for email/ });
-export const isOutlook = page =>
-  ['outlook.cloud.microsoft', 'outlook.office.com', 'outlook.office365.com', 'outlook.live.com'].includes(new URL(page.url()).hostname);
+const outlookHosts = ['outlook.cloud.microsoft', 'outlook.office.com', 'outlook.office365.com', 'outlook.live.com'];
+
+function isOutlookUrl(value) {
+  const url = new URL(value);
+  return url.protocol === 'https:' && outlookHosts.some(host =>
+    url.hostname === host || url.hostname === host + '.mcas.ms');
+}
+
+export const isOutlook = page => isOutlookUrl(page.url());
 
 export async function openProfile(account, headless) {
   if (!/^[a-z][a-z0-9_-]{0,31}$/.test(account)) throw new Error('Invalid profile alias.');
@@ -32,11 +39,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     await page.goto(profileUrl(account), {waitUntil: 'domcontentloaded'});
     console.log(`Sign in to Outlook in the ${account} window. It closes when the mailbox is ready.`);
     const deadline = Date.now() + 300000;
-    while (Date.now() < deadline) {
+    while (!page.isClosed() && Date.now() < deadline) {
       if (isOutlook(page) && await searchBox(page).isVisible() && !new URL(page.url()).hash) break;
       await new Promise(resolve => setTimeout(resolve, 500));
     }
-    if (!isOutlook(page) || !await searchBox(page).isVisible()) {
+    if (page.isClosed() || !isOutlook(page) || !await searchBox(page).isVisible()) {
       throw new Error('Outlook mailbox not reached before the sign-in window expired.');
     }
     console.log(`Saved profile ${account}.`);
